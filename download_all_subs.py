@@ -9,8 +9,15 @@ import sys
 sys.stdout.reconfigure(encoding='utf-8')
 
 # Paths
-urls_file = r"c:\2026AI_agent\AI_AgentEP01_用 Agent 來學習 Agent\sensebar_ai_urls.txt"
-sub_dir = r"c:\2026AI_agent\AI_AgentEP01_用 Agent 來學習 Agent\subtitles"
+script_dir = os.path.dirname(os.path.abspath(__file__))
+urls_file = os.path.join(script_dir, "sensebar_ai_urls.txt")
+# 建立三層知識庫結構
+clipping_dir = os.path.join(script_dir, "Clipping")
+creation_dir = os.path.join(script_dir, "創作庫")
+knowledge_dir = os.path.join(script_dir, "知識庫")
+for d in [clipping_dir, creation_dir, knowledge_dir]:
+    os.makedirs(d, exist_ok=True)
+sub_dir = clipping_dir
 os.makedirs(sub_dir, exist_ok=True)
 
 # Read URLs

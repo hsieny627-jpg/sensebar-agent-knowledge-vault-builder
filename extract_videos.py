@@ -1,76 +1,82 @@
 import yt_dlp
-import json
 import os
 import sys
-
-# Set output encoding to UTF-8
 sys.stdout.reconfigure(encoding='utf-8')
 
-url = "https://www.youtube.com/@sensebar/videos"
-ydl_opts = {
-    'extract_flat': True,
-    'skip_download': True,
-    'quiet': True,
-}
+script_dir = os.path.dirname(os.path.abspath(__file__))
+keywords = ["claude", "codex", "antigravity", "opencode", "agent", "googlea"]
 
-# Targeted keywords as requested
-keywords = ["claude", "codex", "antigravity", "opencode", "agent"]
+all_entries = []
+for tab in ['videos', 'streams']:
+    url = 'https://www.youtube.com/@sensebar/' + tab
+    ydl_opts = {'extract_flat': True, 'skip_download': True, 'quiet': True}
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+        entries = info.get('entries', [])
+        all_entries.extend(entries)
+        print(tab + ' 分頁: ' + str(len(entries)) + ' 支')
+    except Exception as e:
+        print('提取 ' + tab + ' 失敗: ' + str(e))
 
-print("Extracting videos from sensebar YouTube channel...")
-try:
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=False)
-except Exception as e:
-    print(f"Error extracting channel info: {e}")
-    sys.exit(1)
+# 去重（同一個 video ID 取第一個）
+seen_ids = set()
+unique_entries = []
+for e in all_entries:
+    vid = e.get('id', '')
+    if vid and vid not in seen_ids:
+        seen_ids.add(vid)
+        unique_entries.append(e)
 
-entries = info.get('entries', [])
-print(f"Total videos found on channel: {len(entries)}")
+print('去重後共 ' + str(len(unique_entries)) + ' 支影片')
+print()
 
 matches = []
-for entry in entries:
+for entry in unique_entries:
     title = entry.get('title', '')
-    video_url = entry.get('url', '')
-    # If the URL is just the video ID, format it
-    if video_url and not video_url.startswith('http'):
-        video_url = f"https://www.youtube.com/watch?v={video_url}"
-    elif not video_url:
-        video_id = entry.get('id', '')
-        if video_id:
-            video_url = f"https://www.youtube.com/watch?v={video_id}"
-        else:
-            continue
-            
+    video_url = 'https://www.youtube.com/watch?v=' + entry.get('id', '')
     title_lower = title.lower()
-    matched_kws = []
-    
-    for kw in keywords:
-        if kw in title_lower:
-            matched_kws.append(kw)
-            
+    matched_kws = [kw for kw in keywords if kw in title_lower]
     if matched_kws:
-        matches.append({
-            'title': title,
-            'url': video_url,
-            'matched': matched_kws
-        })
+        matches.append({'title': title, 'url': video_url, 'matched': matched_kws})
 
-print(f"Matched {len(matches)} videos.")
+print('匹配 ' + str(len(matches)) + ' 支影片')
+print()
 
-# Generate markdown content
-md_content = "# @sensebar AI Agent 相關影片清單\n\n"
-md_content += f"此清單篩選自 YouTube 頻道 [@sensebar](https://www.youtube.com/@sensebar) 中與 **Claude AI**、**Codex**、**AntiGravity**、**OpenCode** 及 **AI Agent** 相關的影片。\n\n"
-md_content += f"**篩選關鍵字：** `{', '.join(keywords)}`\n\n"
-md_content += "| 影片標題 | 網址 | 匹配關鍵字 |\n"
-md_content += "| --- | --- | --- |\n"
-
+# 輸出過濾清單 sensebar_ai_videos.md
+md = '# @sensebar AI Agent 相關影片清單\n\n'
+md += '此清單篩選自 YouTube 頻道 [@sensebar](https://www.youtube.com/@sensebar) 中與 **Claude AI**、**Codex**、**AntiGravity**、**OpenCode**、**AI Agent** 及 **Google AI** 相關的影片。\n\n'
+md += '**篩選關鍵字：** ' + ', '.join(keywords) + '\n\n'
+md += '| 影片標題 | 網址 | 匹配關鍵字 |\n'
+md += '| --- | --- | --- |\n'
 for m in matches:
-    # Escape pipe characters in titles to not break markdown table
-    escaped_title = m['title'].replace('|', '\\|')
-    md_content += f"| {escaped_title} | [{m['url']}]({m['url']}) | {', '.join(m['matched'])} |\n"
+    escaped = m['title'].replace('|', '\\|')
+    md += '| ' + escaped + ' | [' + m['url'] + '](' + m['url'] + ') | ' + ', '.join(m['matched']) + ' |\n'
 
-output_path = r"c:\2026AI_agent\AI_AgentEP01_用 Agent 來學習 Agent\sensebar_ai_videos.md"
-with open(output_path, "w", encoding="utf-8") as f:
-    f.write(md_content)
+out_path = os.path.join(script_dir, 'sensebar_ai_videos.md')
+with open(out_path, 'w', encoding='utf-8') as f:
+    f.write(md)
+print('儲存過濾清單至: ' + out_path)
 
-print(f"成功儲存影片清單至：{output_path}")
+# 輸出全部清單 sensebar_all_videos.md
+all_md = '# @sensebar 頻道全部影片清單（含直播）\n\n'
+all_md += '| # | 標題 | 網址 |\n'
+all_md += '| --- | --- | --- |\n'
+for i, entry in enumerate(unique_entries, 1):
+    title = entry.get('title', '')
+    vid = entry.get('id', '')
+    url_full = 'https://www.youtube.com/watch?v=' + vid
+    escaped = title.replace('|', '\\|')
+    all_md += '| ' + str(i) + ' | ' + escaped + ' | [' + url_full + '](' + url_full + ') |\n'
+
+all_out = os.path.join(script_dir, 'sensebar_all_videos.md')
+with open(all_out, 'w', encoding='utf-8') as f:
+    f.write(all_md)
+print('儲存全部清單至: ' + all_out)
+
+# 輸出 URL 清單 sensebar_ai_urls.txt
+urls_path = os.path.join(script_dir, 'sensebar_ai_urls.txt')
+with open(urls_path, 'w', encoding='utf-8') as f:
+    for m in matches:
+        f.write(m['url'] + '\n')
+print('儲存 URL 清單（' + str(len(matches)) + ' 筆）至: ' + urls_path)
