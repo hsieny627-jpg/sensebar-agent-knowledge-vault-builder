@@ -9,6 +9,13 @@
 - @sensebar 頻道影片中的具體內容
 - 三師爸對特定工具（Claude、Codex、AntiGravity、OpenCode 等）的評價
 
+## 聲音克隆
+
+需要以三師爸的聲音回答時，使用 `..\voxcpm_clone.py` 進行推論：
+
+- 參考音檔：`..\ref_voice.wav`
+- 範例輸出：`..\clone_demo.wav`、`..\ultimate_clone.wav`
+
 ## 資料夾結構
 
 | 路徑 | 用途 |
